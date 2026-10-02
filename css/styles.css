@@ -74,6 +74,10 @@ body {
   overflow-x: hidden;
 }
 img, svg, canvas { display: block; max-width: 100%; }
+/* Long compound words (mainly German) must wrap instead of widening the page */
+h1, h2, h3, h4, p, li, dd, dt, label, a, button, strong { overflow-wrap: break-word; }
+:lang(de) h1, :lang(de) h2, :lang(de) h3, :lang(de) h4, :lang(de) .market-name,
+:lang(de) .cat-grid li, :lang(de) .model-name { -webkit-hyphens: auto; hyphens: auto; }
 h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 a { color: inherit; }
@@ -95,6 +99,9 @@ address { font-style: normal; }
   transition: top var(--dur) var(--ease);
 }
 .skip-link:focus { top: 1rem; }
+
+/* Hidden for a moment while a stored EN/DE language is applied (see <head>) */
+.i18n-pending body { visibility: hidden; }
 
 /* ---------- Layout ---------- */
 .wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: var(--gutter); }
@@ -869,7 +876,7 @@ address { font-style: normal; }
 .contact-grid { display: grid; gap: 3.5rem; }
 .contact-info .h2 { margin-bottom: 1.25rem; }
 .contact-direct { margin-top: 2.5rem; border-top: 1px solid var(--ink); }
-.contact-direct li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.contact-direct li { display: grid; grid-template-columns: 8.5rem 1fr; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); align-items: baseline; }
 .contact-label { font-size: var(--fs-micro); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
 .contact-direct a {
   font-size: clamp(1.15rem, 1rem + 0.6vw, 1.5rem); font-weight: 600; letter-spacing: -0.015em; text-decoration: none;

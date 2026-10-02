@@ -9,6 +9,10 @@
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var scrollBehavior = function () { return reducedMotion.matches ? 'auto' : 'smooth'; };
 
+  // i18n (js/i18n.js); falls back to Polish-only behaviour if it failed to load
+  var I18n = window.PolTradeI18n || { t: function (k) { return k; }, lang: function () { return 'pl'; }, set: function () {}, onChange: function () {} };
+  var t = I18n.t;
+
   /* ---------- Toast ---------- */
   var toastEl = $('#toast'), toastTimer;
   function toast(msg) {
@@ -38,7 +42,7 @@
   var desktopNav = window.matchMedia('(min-width: 1240px)');
   function setMenu(open, returnFocus) {
     menuBtn.setAttribute('aria-expanded', String(open));
-    menuBtn.querySelector('.menu-toggle-label').textContent = open ? 'Zamknij' : 'Menu';
+    menuBtn.querySelector('.menu-toggle-label').textContent = t(open ? 'menu.close' : 'menu.open');
     if (open) document.documentElement.style.setProperty('--nav-top', header.offsetHeight + 'px');
     nav.classList.toggle('is-open', open);
     document.body.style.overflow = open ? 'hidden' : '';
@@ -162,13 +166,14 @@
     });
   });
 
-  /* ---------- Language switch (PL only for now) ---------- */
-  $$('.lang').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var msg = b.getAttribute('data-lang-msg');
-      if (msg) toast(msg);
-    });
+  /* ---------- Language switch ---------- */
+  $$('.lang[lang]').forEach(function (b) {
+    b.addEventListener('click', function () { I18n.set(b.getAttribute('lang')); });
   });
+  I18n.onChange(function () {
+    menuBtn.querySelector('.menu-toggle-label').textContent = t(menuBtn.getAttribute('aria-expanded') === 'true' ? 'menu.close' : 'menu.open');
+  });
+  menuBtn.querySelector('.menu-toggle-label').textContent = t('menu.open');
 
   /* ---------- Placeholder links (articles, privacy policy) ---------- */
   document.addEventListener('click', function (e) {
@@ -225,7 +230,7 @@
   var afterClose = null;
 
   function activeQuestions() {
-    return A.questions.filter(function (q) { return !(q.skipIf && q.skipIf(state.answers)); });
+    return A.questions.filter(function (q) { return A.isActive(q, state.answers); });
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -243,29 +248,31 @@
     var q = qs[state.step];
     var selected = state.answers[q.id];
     var last = state.step === qs.length - 1;
+    var T = A.tr(I18n.lang()).q[q.id];
     renderProgress(qs.length, state.step, false);
 
     var opts = q.options.map(function (o, i) {
       var id = 'aq-' + q.id + '-' + i;
+      var label = T.o[o.v];
       return '<label class="assess-opt" for="' + id + '">' +
         '<input type="radio" name="' + q.id + '" id="' + id + '" value="' + esc(o.v) + '"' + (selected === o.v ? ' checked' : '') + '>' +
         '<span class="assess-opt-box"><span class="assess-radio" aria-hidden="true"></span>' +
-        '<span class="assess-opt-text"><strong>' + esc(o.t) + '</strong>' + (o.d ? '<small>' + esc(o.d) + '</small>' : '') + '</span></span>' +
+        '<span class="assess-opt-text"><strong>' + esc(label[0]) + '</strong>' + (label[1] ? '<small>' + esc(label[1]) + '</small>' : '') + '</span></span>' +
         '</label>';
     }).join('');
 
     body.innerHTML =
       '<form class="assess-step is-entering" novalidate>' +
-        '<p class="assess-count">Pytanie ' + (state.step + 1) + ' z ' + qs.length + '</p>' +
-        '<h2 class="assess-q" id="assess-q" tabindex="-1">' + esc(q.q) + '</h2>' +
-        (q.help ? '<p class="assess-help" id="assess-help">' + esc(q.help) + '</p>' : '') +
-        '<fieldset class="assess-options' + (q.twoCol ? ' is-two-col' : '') + '" aria-labelledby="assess-q"' + (q.help ? ' aria-describedby="assess-help"' : '') + '>' +
-          '<legend class="visually-hidden">' + esc(q.q) + '</legend>' + opts +
+        '<p class="assess-count">' + esc(t('assess.count', { n: state.step + 1, total: qs.length })) + '</p>' +
+        '<h2 class="assess-q" id="assess-q" tabindex="-1">' + esc(T.q) + '</h2>' +
+        (T.help ? '<p class="assess-help" id="assess-help">' + esc(T.help) + '</p>' : '') +
+        '<fieldset class="assess-options' + (q.twoCol ? ' is-two-col' : '') + '" aria-labelledby="assess-q"' + (T.help ? ' aria-describedby="assess-help"' : '') + '>' +
+          '<legend class="visually-hidden">' + esc(T.q) + '</legend>' + opts +
         '</fieldset>' +
         '<div class="assess-nav">' +
-          '<button type="button" class="assess-back" data-back' + (state.step === 0 ? ' disabled' : '') + '>← Wstecz</button>' +
-          '<span class="assess-keyhint">Enter: dalej</span>' +
-          '<button type="submit" class="btn btn-primary" data-next' + (selected ? '' : ' disabled') + '>' + (last ? 'Zobacz wynik' : 'Dalej') + ' <span class="btn-arrow" aria-hidden="true">→</span></button>' +
+          '<button type="button" class="assess-back" data-back' + (state.step === 0 ? ' disabled' : '') + '>' + esc(t('assess.back')) + '</button>' +
+          '<span class="assess-keyhint">' + esc(t('assess.keyhint')) + '</span>' +
+          '<button type="submit" class="btn btn-primary" data-next' + (selected ? '' : ' disabled') + '>' + esc(t(last ? 'assess.finish' : 'assess.next')) + ' <span class="btn-arrow" aria-hidden="true">→</span></button>' +
         '</div>' +
       '</form>';
 
@@ -290,7 +297,9 @@
     renderProgress(qs.length, qs.length, true);
     var res = A.score(state.answers);
     var m = A.models[res.model];
-    var why = A.explain(state.answers, res.model);
+    var lang = I18n.lang();
+    var mt = A.tr(lang).models[res.model];
+    var why = A.explain(state.answers, lang);
     state.result = res.model;
 
     $$('.model').forEach(function (el) { el.classList.remove('is-highlight'); });
@@ -299,24 +308,24 @@
 
     body.innerHTML =
       '<div class="assess-step is-entering">' +
-        '<p class="assess-done-mark">Gotowe: ' + qs.length + ' z ' + qs.length + ' odpowiedzi</p>' +
-        '<p class="assess-result-label">Model, który najlepiej pasuje do Twojej sytuacji</p>' +
+        '<p class="assess-done-mark">' + esc(t('assess.done', { n: qs.length })) + '</p>' +
+        '<p class="assess-result-label">' + esc(t('assess.resultLabel')) + '</p>' +
         '<div class="assess-result-model"><span class="model-num">' + m.num + '</span><h2 id="assess-result" tabindex="-1">' + esc(m.name) + '</h2></div>' +
-        '<p class="assess-result-sub">' + esc(m.sub) + '</p>' +
+        '<p class="assess-result-sub">' + esc(mt.sub) + '</p>' +
         '<div class="assess-result-grid">' +
-          '<div><h3>Dlaczego ten model</h3><p><strong>' + esc(why.context) + '</strong></p><p>' + esc(why.sentence) + '</p></div>' +
-          '<div><h3>Co zwykle robimy</h3><ul class="tick-list">' + m.activities.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>' +
-          '<div class="assess-next"><h3>Następny krok</h3><p>' + esc(m.next) + '</p>' +
+          '<div><h3>' + esc(t('assess.why')) + '</h3><p><strong>' + esc(why.context) + '</strong></p><p>' + esc(why.sentence) + '</p></div>' +
+          '<div><h3>' + esc(t('assess.activities')) + '</h3><ul class="tick-list">' + mt.activities.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></div>' +
+          '<div class="assess-next"><h3>' + esc(t('assess.nextStep')) + '</h3><p>' + esc(mt.next) + '</p>' +
             '<div class="assess-next-actions">' +
-              '<button type="button" class="btn btn-primary" data-talk>Porozmawiajmy <span class="btn-arrow" aria-hidden="true">→</span></button>' +
+              '<button type="button" class="btn btn-primary" data-talk>' + esc(t('assess.talk')) + ' <span class="btn-arrow" aria-hidden="true">→</span></button>' +
               '<a href="tel:+48600000000">+48 600 000 000</a>' +
-              '<a href="mailto:kontakt@poltrade.pl?subject=' + encodeURIComponent('Model współpracy: ' + m.name) + '">kontakt@poltrade.pl</a>' +
+              '<a href="mailto:kontakt@poltrade.pl?subject=' + encodeURIComponent(t('assess.mailSubject', { model: m.name })) + '">kontakt@poltrade.pl</a>' +
             '</div>' +
           '</div>' +
         '</div>' +
         '<div class="assess-nav">' +
-          '<button type="button" class="assess-back" data-back>← Zmień odpowiedzi</button>' +
-          '<button type="button" class="assess-restart" data-restart>Zacznij od nowa</button>' +
+          '<button type="button" class="assess-back" data-back>' + esc(t('assess.change')) + '</button>' +
+          '<button type="button" class="assess-restart" data-restart>' + esc(t('assess.restart')) + '</button>' +
         '</div>' +
       '</div>';
 
@@ -350,18 +359,15 @@
     var qs = activeQuestions();
     state.step = Math.max(0, Math.min(qs.length, state.step + delta));
     // answers to now-skipped questions are dropped so they cannot influence the result
-    A.questions.forEach(function (q) { if (q.skipIf && q.skipIf(state.answers)) delete state.answers[q.id]; });
+    A.questions.forEach(function (q) { if (!A.isActive(q, state.answers)) delete state.answers[q.id]; });
     render();
   }
 
   function prefillContact(modelKey) {
-    var who = $('#f-who');
-    var typeOpt = A.optionFor('type', state.answers.type);
-    if (typeOpt && typeOpt.contact) {
-      for (var i = 0; i < who.options.length; i++) if (who.options[i].text === typeOpt.contact) who.selectedIndex = i;
-    }
+    // the select's option values match the assessment's company-type values
+    if (state.answers.type) $('#f-who').value = state.answers.type;
     var msg = $('#f-msg');
-    if (!msg.value.trim()) msg.value = A.summaryForContact(state.answers, modelKey);
+    if (!msg.value.trim()) msg.value = A.summaryForContact(state.answers, modelKey, I18n.lang());
   }
 
   function openDialog(trigger) {
@@ -426,20 +432,32 @@
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     var PHONE_RE = /^\+?[\d\s()\-]{7,}$/;
     var rules = {
-      name: function (v) { return v.trim().length < 2 ? 'Wpisz imię i nazwisko, żebym wiedział, jak się do Ciebie zwracać.' : ''; },
+      name: function (v) { return v.trim().length < 2 ? t('form.err.name') : ''; },
       email: function (v) {
-        if (!v.trim()) return 'Wpisz adres e-mail, na który mam odpowiedzieć.';
-        return EMAIL_RE.test(v.trim()) ? '' : 'Ten adres wygląda na niepełny. Sprawdź, czy ma znak @ i domenę, np. jan@firma.pl.';
+        if (!v.trim()) return t('form.err.emailEmpty');
+        return EMAIL_RE.test(v.trim()) ? '' : t('form.err.emailInvalid');
       },
-      phone: function (v) { return !v.trim() || PHONE_RE.test(v.trim()) ? '' : 'Numer może zawierać tylko cyfry, spacje i znak +. Możesz też zostawić to pole puste.'; },
-      who: function (v) { return v ? '' : 'Wybierz sytuację najbliższą Twojej. Jeśli żadna nie pasuje, wybierz „Inna sytuacja”.'; },
+      phone: function (v) { return !v.trim() || PHONE_RE.test(v.trim()) ? '' : t('form.err.phone'); },
+      who: function (v) { return v ? '' : t('form.err.who'); },
       message: function (v) {
-        if (!v.trim()) return 'Napisz kilka słów o tym, w czym mogę pomóc.';
-        return v.trim().length < 10 ? 'Wiadomość jest bardzo krótka. Dopisz choć jedno zdanie o produkcie lub rynku.' : '';
+        if (!v.trim()) return t('form.err.messageEmpty');
+        return v.trim().length < 10 ? t('form.err.messageShort') : '';
       },
-      consent: function (v, el) { return el.checked ? '' : 'Zaznacz zgodę, żebym mógł odpowiedzieć na wiadomość.'; }
+      consent: function (v, el) { return el.checked ? '' : t('form.err.consent'); }
     };
     var attempted = false;
+    var status = $('#form-status');
+    var lastStatus = null;   // { key, vars }, kept so it can be re-rendered in another language
+    function setStatus(key, vars) {
+      lastStatus = key ? { key: key, vars: vars } : null;
+      status.textContent = key ? t(key, vars) : '';
+    }
+
+    // switching language re-renders visible errors and the status line
+    I18n.onChange(function () {
+      $$('.field.has-error input, .field.has-error select, .field.has-error textarea', form).forEach(check);
+      if (lastStatus) setStatus(lastStatus.key, lastStatus.vars);
+    });
 
     function check(el) {
       var rule = rules[el.name];
@@ -465,23 +483,23 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       attempted = true;
-      var status = $('#form-status');
       var invalid = $$('input, select, textarea', form).filter(function (el) { return rules[el.name] && !check(el); });
       if (invalid.length) {
-        status.textContent = (invalid.length === 1 ? 'Popraw jedno zaznaczone pole.' : 'Popraw zaznaczone pola (' + invalid.length + ').') + ' Wpisane dane zostały zachowane.';
+        if (invalid.length === 1) setStatus('form.status.one'); else setStatus('form.status.many', { n: invalid.length });
         invalid[0].focus();
         return;
       }
-      status.textContent = '';
+      setStatus(null);
 
       var submit = $('.form-submit', form);
       var label = $('.submit-label', submit);
       submit.classList.add('is-loading'); submit.setAttribute('aria-disabled', 'true');
-      label.textContent = 'Wysyłam…';
+      label.textContent = t('form.sending');
 
       var data = {};
       new FormData(form).forEach(function (v, k) { data[k] = v; });
       if (state.result) data.assessmentModel = A.models[state.result].name;
+      data.language = I18n.lang();
 
       var endpoint = form.getAttribute('data-endpoint');
       var send;
@@ -498,10 +516,10 @@
         success.classList.add('is-entering');
         success.focus();
       }).catch(function () {
-        status.textContent = 'Nie udało się wysłać wiadomości. Spróbuj ponownie albo napisz bezpośrednio na kontakt@poltrade.pl. Twoje dane zostały zachowane.';
+        setStatus('form.status.failed');
       }).then(function () {
         submit.classList.remove('is-loading'); submit.removeAttribute('aria-disabled');
-        label.textContent = 'Wyślij wiadomość';
+        label.textContent = t('form.send');
       });
     });
   }
