@@ -29,6 +29,9 @@
 <body>
 <a class="skip-link" href="#main" data-i18n="misc.1">Przejdź do treści</a>
 
+<!-- One galaxy for the whole page, fixed to the window behind all content -->
+<canvas class="galaxy-canvas" data-network data-galaxy-dim="0.4" aria-hidden="true"></canvas>
+
 <!-- ============================== HEADER ============================== -->
 <header class="site-header" id="top">
   <div class="header-inner wrap">
@@ -78,7 +81,6 @@
 
 <!-- ============================== HERO ============================== -->
 <section class="hero" aria-labelledby="hero-title">
-  <canvas class="network-canvas" data-network="light" aria-hidden="true"></canvas>
   <div class="wrap hero-inner">
     <p class="eyebrow hero-eyebrow" data-i18n="hero.1"><span class="dot" aria-hidden="true"></span> Sprzedaż międzynarodowa i eksport · Polska</p>
     <h1 id="hero-title" class="display hero-title" data-i18n="hero.2">Eksport, który nie kończy się na pierwszym zamówieniu.</h1>
@@ -452,7 +454,6 @@
 
 <!-- ============================== EXECUTION ============================== -->
 <section class="section execution" aria-labelledby="exec-title">
-  <canvas class="network-canvas" data-network="dark" data-galaxy-x="0.74" data-galaxy-y="0.2" aria-hidden="true"></canvas>
   <div class="wrap execution-inner">
     <p class="section-kicker on-dark" data-i18n="execution.1">Od bramy zakładu do półki</p>
     <h2 id="exec-title" class="exec-statement" data-i18n="execution.2"><span>Produkt nie sprzedaje się sam.</span> Między bramą zakładu a półką w Londynie jest kilkanaście decyzji, które ktoś musi podjąć po kolei.</h2>
@@ -850,7 +851,6 @@
 
 <!-- ============================== FINAL CTA ============================== -->
 <section class="final-cta" aria-labelledby="final-title">
-  <canvas class="network-canvas" data-network="light" data-network-density="0.6" data-galaxy-x="0.82" data-galaxy-y="0.55" aria-hidden="true"></canvas>
   <div class="wrap final-inner">
     <h2 id="final-title" class="display final-title" data-i18n="final.1">Kilka pytań, dwie minuty. Zobaczysz, który model pasuje do Twojej sytuacji.</h2>
     <div class="final-actions">

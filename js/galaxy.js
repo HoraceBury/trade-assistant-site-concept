@@ -11,6 +11,7 @@
 
    Canvas attributes:
      data-network-density="0.6"    particle count multiplier
+     data-galaxy-dim="0.4"         strength once the hero has scrolled out of view
      data-galaxy-x / data-galaxy-y centre as a fraction of the canvas (desktop)
    ========================================================================= */
 (function () {
@@ -27,7 +28,25 @@
 
   var ARMS = 2;
   var PITCH = 3.6;                // log-spiral winding (higher = more turns)
-  var OMEGA = Math.PI * 2 / 60;   // one turn per minute
+  var OMEGA = Math.PI * 2 / 240;  // idle spin: one turn every four minutes
+  // Scrolling adds spin on top of the idle speed, sized so the outer arms move at
+  // roughly the scroll speed. The boost is never negative, so the galaxy never
+  // stops or reverses; scrolling up also speeds it up, in the same direction.
+  var SCROLL_RADIUS = 0.6;        // the boost matches scroll speed at this fraction of the radius
+  var MAX_BOOST = 2;              // rad/s cap, so anchor jumps don't whip it round
+  var BOOST_RISE = 0.12;          // s, how quickly it picks up speed
+  var BOOST_FALL = 0.9;           // s, how gently it settles back to idle
+
+  // page scroll speed in px/s, shared by every galaxy on the page
+  var scrollSpeed = 0, lastScrollY = window.scrollY, lastScrollT = performance.now();
+  function sampleScroll(now) {
+    var dt = (now - lastScrollT) / 1000;
+    if (dt <= 0) return scrollSpeed;
+    var y = window.scrollY;
+    scrollSpeed = Math.abs(y - lastScrollY) / dt;
+    lastScrollY = y; lastScrollT = now;
+    return scrollSpeed;
+  }
   var TILT = 0.56;                // vertical squash: viewing the disc at an angle
   var INCLINE = -0.28;            // on-screen rotation of the disc, rad
   var GREEN_AT = { rn: 0.17, a: 2.4 };  // where the green cloud sits in the disc
@@ -67,12 +86,16 @@
   function Galaxy(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    canvas.galaxy = this;                 // debugging handle: document.querySelector('canvas').galaxy
     this.density = parseFloat(canvas.getAttribute('data-network-density') || '1');
     this.fx = parseFloat(canvas.getAttribute('data-galaxy-x') || '0.66');
     this.fy = parseFloat(canvas.getAttribute('data-galaxy-y') || '0.5');
+    this.dimTo = parseFloat(canvas.getAttribute('data-galaxy-dim') || '1');   // strength once the hero has scrolled away
     this.pointer = { x: 0, y: 0, active: false };
     this.shift = { x: 0, y: 0, tilt: 0 };
     this.time = rand(0, 60);
+    this.angle = rand(0, Math.PI * 2);   // accumulated rotation
+    this.boost = 0;                      // extra spin from scrolling, rad/s (never negative)
     this.fade = 0;
     this.running = false;
     this.visible = false;
@@ -196,9 +219,9 @@
     var ctx = this.ctx, t = this.time, R = this.R;
     var cx = this.cx + this.shift.x, cy = this.cy + this.shift.y;
     var tilt = TILT + this.shift.tilt;
-    var rot = OMEGA * t;
+    var rot = this.angle;
     var cosI = Math.cos(INCLINE), sinI = Math.sin(INCLINE);
-    var master = this.fade * this.strength;
+    var master = this.fade * this.strength * this.scrollDim();
 
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
@@ -235,6 +258,13 @@
     var dt = this.last ? Math.min(0.05, (now - this.last) / 1000) : 0.016;
     this.last = now;
     this.time += dt;
+    // idle spin plus the eased scroll boost
+    var speed = Math.min(sampleScroll(now), 6000);
+    var target = Math.min(MAX_BOOST, speed / (this.R * SCROLL_RADIUS));
+    var tau = target > this.boost ? BOOST_RISE : BOOST_FALL;
+    this.boost += (target - this.boost) * (1 - Math.exp(-dt / tau));
+    this.boost = Math.max(0, this.boost);
+    this.angle += (OMEGA + this.boost) * dt;
     this.update(dt);
     this.draw();
     this.raf = requestAnimationFrame(this._frame);
@@ -257,6 +287,17 @@
     } else this.start();
   };
 
+  // Full strength while the hero is on screen, easing down to `dimTo` as it
+  // scrolls away, so the galaxy stays visible but quiet behind the content.
+  Galaxy.prototype.scrollDim = function () {
+    if (this.dimTo >= 1) return 1;
+    var hero = document.querySelector('.hero');
+    var span = (hero ? hero.offsetHeight : this.h) * 0.85;
+    var f = Math.min(1, Math.max(0, window.scrollY / span));
+    f = f * f * (3 - 2 * f);
+    return 1 - f * (1 - this.dimTo);
+  };
+
   Galaxy.prototype.bind = function () {
     var self = this;
     if ('IntersectionObserver' in window) {
@@ -277,6 +318,14 @@
         if (reducedQuery.matches && self.visible) self.draw();
       }).observe(this.canvas);
     }
+
+    // reduced motion: the frame is static, but still follow the scroll dimming
+    var pending = false;
+    window.addEventListener('scroll', function () {
+      if (!reducedQuery.matches || pending) return;
+      pending = true;
+      requestAnimationFrame(function () { pending = false; self.draw(); });
+    }, { passive: true });
 
     var host = this.canvas.parentElement;
     if (!mobileQuery.matches) {

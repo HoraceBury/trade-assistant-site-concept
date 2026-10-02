@@ -107,7 +107,9 @@ address { font-style: normal; }
 .wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: var(--gutter); }
 .section { position: relative; padding-block: var(--section-y); }
 .section-tight { padding-block: clamp(3.5rem, 2rem + 4vw, 6rem); }
-.section-alt { background: var(--white); }
+/* page content sits above the fixed galaxy; section surfaces are translucent so it shows through */
+main, .site-footer { position: relative; z-index: 1; }
+.section-alt { background: rgba(14, 18, 22, 0.78); }
 
 /* ---------- Typography ---------- */
 .display {
@@ -278,23 +280,22 @@ address { font-style: normal; }
 .menu-toggle[aria-expanded="true"] .menu-toggle-lines span:last-child { top: 5px; transform: rotate(-45deg); }
 
 /* ---------- Network canvas ---------- */
-.network-canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%;
+.galaxy-canvas {
+  /* fixed to the window; sized to the largest viewport so the mobile URL bar doesn't stretch it */
+  position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100lvh;
   pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse 75% 70% at 66% 50%, #161c27 0%, #0c1016 45%, var(--paper) 80%);
+  -webkit-mask-image: linear-gradient(100deg, rgba(0,0,0,0.3) 8%, rgba(0,0,0,0.6) 38%, #000 62%);
+  mask-image: linear-gradient(100deg, rgba(0,0,0,0.3) 8%, rgba(0,0,0,0.6) 38%, #000 62%);
 }
 
 /* ---------- Hero ---------- */
 .hero {
   position: relative; overflow: hidden;
-  background: radial-gradient(ellipse 75% 70% at 72% 52%, #161c27 0%, #0c1016 45%, var(--paper) 80%);
   min-height: min(100svh, 980px);
   padding-top: calc(var(--header-h) + clamp(3rem, 2rem + 6vh, 8rem));
   padding-bottom: clamp(2.5rem, 2rem + 3vh, 4rem);
   display: flex;
-}
-.hero .network-canvas {
-  -webkit-mask-image: linear-gradient(100deg, rgba(0,0,0,0.22) 8%, rgba(0,0,0,0.55) 38%, #000 62%);
-  mask-image: linear-gradient(100deg, rgba(0,0,0,0.22) 8%, rgba(0,0,0,0.55) 38%, #000 62%);
 }
 .hero-inner { position: relative; z-index: 1; display: flex; flex-direction: column; }
 /* keeps copy crisp where it crosses bright particles */
@@ -549,8 +550,7 @@ address { font-style: normal; }
 .process-foot { margin-top: clamp(3rem, 2rem + 3vw, 5rem); display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: center; }
 
 /* ---------- Execution (dark) ---------- */
-.execution { background: var(--dark); color: var(--on-dark); overflow: hidden; }
-.execution .network-canvas { opacity: 0.9; }
+.execution { background: rgba(3, 4, 5, 0.55); color: var(--on-dark); overflow: hidden; }
 .execution-inner { position: relative; z-index: 1; }
 .exec-statement {
   font-family: var(--font-serif); font-weight: 400;
@@ -861,10 +861,8 @@ address { font-style: normal; }
 /* ---------- Final CTA ---------- */
 .final-cta {
   position: relative; overflow: hidden;
-  background: radial-gradient(ellipse 70% 80% at 85% 55%, #161c27 0%, #0c1016 50%, var(--paper) 85%);
   padding-block: clamp(5rem, 3rem + 8vw, 11rem);
 }
-.final-cta .network-canvas { -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%); mask-image: linear-gradient(180deg, transparent, #000 40%); }
 .final-inner { position: relative; z-index: 1; display: grid; gap: 2.5rem; }
 .final-title { font-size: clamp(2.2rem, 1.3rem + 3.8vw, 5rem); max-width: 18ch; }
 .final-actions { display: grid; gap: 1.75rem; justify-items: start; }
@@ -954,7 +952,7 @@ address { font-style: normal; }
 .form-success.is-entering { animation: fadeUp 420ms var(--ease) both; }
 
 /* ---------- Footer ---------- */
-.site-footer { background: var(--dark); color: var(--on-dark); padding-top: clamp(4rem, 3rem + 4vw, 7rem); }
+.site-footer { background: rgba(3, 4, 5, 0.72); color: var(--on-dark); padding-top: clamp(4rem, 3rem + 4vw, 7rem); }
 .site-footer a { text-decoration: none; color: var(--on-dark); transition: color var(--dur) var(--ease); }
 .site-footer a:hover { color: var(--accent-on-dark); }
 .site-footer :focus-visible { box-shadow: 0 0 0 3px var(--dark), 0 0 0 5px var(--on-dark); }
@@ -1132,7 +1130,7 @@ body.dialog-open { overflow: hidden; }
 
 /* ---------- Print ---------- */
 @media print {
-  .site-header, .mobile-cta, .network-canvas, .assess, .toast, .contact-form-wrap { display: none !important; }
+  .site-header, .mobile-cta, .galaxy-canvas, .assess, .toast, .contact-form-wrap { display: none !important; }
   .switch-panel[hidden], .market-panel[hidden] { display: block !important; }
   body { background: #fff; color: #000; }
 }
