@@ -24,16 +24,24 @@
 
   /* ---------- Header: compact on scroll ---------- */
   var header = $('.site-header');
+  var progressBar = $('.scroll-progress-bar');
   var ticking = false;
   function onScroll() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(function () {
       header.classList.toggle('is-scrolled', window.scrollY > 24);
+      // how far down the whole page we are, 0–1
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      var progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      if (progressBar) progressBar.style.transform = 'scaleX(' + progress.toFixed(4) + ')';
       ticking = false;
     });
   }
   window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  // page height also changes when accordions, tabs or the form open and close
+  if ('ResizeObserver' in window) new ResizeObserver(onScroll).observe(document.body);
   onScroll();
 
   /* ---------- Mobile menu ---------- */
