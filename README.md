@@ -5,7 +5,7 @@ Static single-page site built from [concept-spec.md](concept-spec.md). No build 
 ```
 index.html          all content (Polish)
 css/styles.css      design tokens + all styles
-js/network.js       animated trade-network background (canvas)
+js/galaxy.js        animated swirling-galaxy background (canvas)
 js/assessment.js    model-assessment questions, scoring and result copy
 js/main.js          navigation, switchers, accordion, assessment dialog, contact form
 ```
